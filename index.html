@@ -1,0 +1,896 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy Birthday Areeba!</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Lobster&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #ff8ba7, #ffe4b5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-y: auto;
+      padding: 20px;
+      transition: background 0.3s;
+      background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Crect x="0" y="0" width="100" height="100" fill="none"/%3E%3Ccircle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.05)"/%3E%3C/svg%3E');
+    }
+    body.dark {
+      background: linear-gradient(135deg, #2c1e66, #5e2b8c);
+    }
+    body.blue-green {
+      background: linear-gradient(135deg, #2ec4b6, #56d4e9);
+    }
+    body.purple-orange {
+      background: linear-gradient(135deg, #c445b8, #ff7043);
+    }
+    body.dark .container, body.dark .clock, body.dark .countdown, body.dark .message-form, body.dark .guestbook {
+      background: rgba(40, 40, 40, 0.95);
+      color: #fff;
+    }
+    body.dark p, body.dark .guestbook p {
+      color: #ddd;
+    }
+    .clock {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: clamp(14px, 2vw, 16px);
+      color: #ff2d55;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    }
+    .countdown {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: clamp(14px, 2vw, 16px);
+      color: #ff2d55;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    }
+    .container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+      max-width: 600px;
+      width: 90%;
+      margin: 20px auto;
+    }
+    h1 {
+      font-family: 'Pacifico', cursive;
+      color: #ff2d55;
+      font-size: clamp(32px, 5vw, 44px);
+      margin-bottom: 20px;
+      animation: bounce 1s infinite;
+    }
+    h3 {
+      font-family: 'Pacifico', cursive;
+      color: #ff5e62;
+      font-size: clamp(20px, 3vw, 24px);
+      margin-bottom: 15px;
+      font-weight: 700;
+    }
+    p {
+      color: #222;
+      font-size: clamp(16px, 2.5vw, 20px);
+      margin-bottom: 15px;
+    }
+    .gift-button, .game-button {
+      background: #ff5e62;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: clamp(14px, 2vw, 16px);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      margin: 20px 0;
+    }
+    .gift-button:hover, .game-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(255, 45, 85, 0.4);
+    }
+    .gift-container {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #fff0f5, #ffd1dc);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      z-index: 1000;
+      max-width: 90%;
+      border: 3px solid #ff4081;
+    }
+    .gift-container.open {
+      border-color: #ff2d55;
+      box-shadow: 0 0 20px rgba(255, 45, 85, 0.5);
+    }
+    .gift-lid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #ff6384, #ff2d55);
+      border-radius: 20px;
+      border: 3px solid #ff4081;
+      z-index: 1001;
+      display: none;
+    }
+    .gift-container.open .gift-lid {
+      display: block;
+    }
+    .gift-container.revealed .gift-lid {
+      display: none;
+    }
+    .gift-container::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      width: 60%;
+      height: 20px;
+      background: #ffd700;
+      transform: translateX(-50%);
+      border-radius: 5px;
+      z-index: 1002;
+    }
+    .gift-container::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: -10px;
+      width: 20px;
+      height: 60%;
+      background: #ffd700;
+      transform: translateY(-50%);
+      border-radius: 5px;
+      z-index: 1002;
+    }
+    .gift-container img {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+      animation: pulse 1.5s infinite;
+      filter: drop-shadow(0 0 8px #ff4081);
+    }
+    .gift-container p {
+      font-family: 'Lobster', cursive;
+      color: #ff2d55;
+      font-size: clamp(16px, 2.5vw, 20px);
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    .close-button {
+      background: #ff2d55;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.3s;
+    }
+    .close-button:hover {
+      background: #e91e63;
+    }
+    .message-form {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+      max-width: 600px;
+      width: 90%;
+      margin: 20px auto;
+      text-align: center;
+      transition: box-shadow 0.3s;
+      border: 2px solid transparent;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), linear-gradient(135deg, #ff5e62, #ff2d55);
+      background-origin: border-box;
+      background-clip: padding-box, border-box;
+    }
+    .message-form:hover {
+      box-shadow: 0 10px 20px rgba(255, 45, 85, 0.3);
+    }
+    .message-form .input-wrapper {
+      position: relative;
+      margin-bottom: 15px;
+    }
+    .message-form input, .message-form textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #ff5e62;
+      background: #fff;
+      transition: transform 0.2s, border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .message-form input:focus, .message-form textarea:focus {
+      transform: scale(1.02);
+      border-color: #ff2d55;
+      outline: none;
+    }
+    .message-form textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .message-form input::placeholder, .message-form textarea::placeholder {
+      color: transparent;
+    }
+    .message-form label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 14px;
+      color: #ff5e62;
+      transition: all 0.2s;
+      pointer-events: none;
+    }
+    .message-form input:focus + label,
+    .message-form textarea:focus + label,
+    .message-form input:not(:placeholder-shown) + label,
+    .message-form textarea:not(:placeholder-shown) + label {
+      top: -10px;
+      left: 8px;
+      font-size: 12px;
+      background: #fff;
+      padding: 0 5px;
+      color: #ff2d55;
+    }
+    .message-form button, .guestbook button, .download-button button {
+      background: #ff5e62;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .message-form button:hover, .guestbook button:hover, .download-button button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(255, 45, 85, 0.4);
+    }
+    .guestbook {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+      max-width: 600px;
+      width: 90%;
+      margin: 20px auto;
+      text-align: center;
+    }
+    .guestbook p {
+      position: relative;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .guestbook p.liked {
+      font-weight: bold;
+      color: #ff2d55;
+    }
+    .like-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .like-button.liked::after {
+      content: '❤️';
+    }
+    .like-button:not(.liked)::after {
+      content: '♡';
+    }
+    .slideshow {
+      position: relative;
+      width: clamp(200px, 50vw, 400px);
+      height: clamp(200px, 50vw, 400px);
+      margin: 20px auto;
+      overflow: hidden;
+      border-radius: 15px;
+      border: 2px solid #ff4081;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s;
+    }
+    .slideshow:hover {
+      transform: scale(1.02);
+    }
+    .slideshow img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      transform: scale(1.1);
+    }
+    .slideshow img.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .slideshow-caption {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px;
+      text-align: center;
+      font-size: clamp(12px, 1.5vw, 14px);
+    }
+    .slideshow-nav {
+      position: absolute;
+      top: 50%;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      transform: translateY(-50%);
+    }
+    .slideshow-nav button {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 50%;
+      transition: background 0.3s;
+    }
+    .slideshow-nav button:hover {
+      background: #ff5e62;
+      color: white;
+    }
+    .music-section, .background-section {
+      margin: 20px auto;
+      text-align: center;
+      max-width: 600px;
+      width: 90%;
+    }
+    .music-section select, .background-section select {
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #ff5e62;
+      background: rgba(255, 255, 255, 0.95);
+      cursor: pointer;
+      width: 200px;
+    }
+    .mute-toggle {
+      background: #ff5e62;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-left: 10px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .mute-toggle:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(255, 45, 85, 0.4);
+    }
+    .balloon {
+      position: absolute;
+      width: clamp(40px, 8vw, 60px);
+      height: clamp(60px, 12vw, 80px);
+      background: linear-gradient(135deg, #ff5e62, #ff2d55);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      cursor: pointer;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.3);
+      z-index: 999;
+    }
+    .balloon::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      width: 2px;
+      height: 20px;
+      background: #666;
+      transform: translateX(-50%);
+    }
+    .balloon.popped {
+      display: none;
+    }
+    .theme-toggle, .social-share, .analytics, .download-button {
+      margin: 20px auto;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      max-width: 600px;
+      width: 90%;
+    }
+    .theme-toggle button, .social-share button {
+      background: #ff5e62;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .theme-toggle button:hover, .social-share button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(255, 45, 85, 0.4);
+    }
+    .analytics p {
+      color: #ff5e62;
+      font-size: 14px;
+      margin: 0;
+    }
+    .confetti {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #ff0;
+      opacity: 0.8;
+      animation: fall 5s infinite;
+      z-index: 998;
+    }
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-15px); }
+      60% { transform: translateY(-8px); }
+    }
+    @keyframes fall {
+      0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(0); }
+      to { transform: translateY(-100%); opacity: 0; }
+    }
+    @media (max-width: 600px) {
+      .container, .message-form, .guestbook {
+        padding: 20px;
+      }
+      .gift-container {
+        padding: 25px;
+      }
+      .clock, .countdown {
+        font-size: 12px;
+        padding: 6px 12px;
+      }
+      .slideshow {
+        width: 100%;
+        height: clamp(150px, 40vw, 300px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="clock" id="clock"></div>
+  <div class="countdown" id="countdown"></div>
+  <div class="container">
+    <h1>Happy Birthday, Areeba!</h1>
+    <p>Wishing you a day full of love, laughter, and endless joy!</p>
+    <p>You're the best sister ever! 🎉</p>
+    <button class="gift-button" onclick="revealGift()">Open Your Surprise Gift!</button>
+    <div id="giftContainer" class="gift-container">
+      <div class="gift-lid"></div>
+      <img src="image.jpg" alt="Gift Box">
+      <p>
+        Dearest Areeba, may your future be as bright as your smile! Wishing you endless success, boundless happiness, and the courage to chase your wildest dreams. Here's to a journey filled with love and adventure! 🎁✨
+      </p>
+      <button class="close-button" onclick="closeGift()">Close</button>
+    </div>
+    <div class="slideshow">
+      <img src="image.jpg" alt="Areeba Smiling" data-caption="Areeba's radiant smile!">
+      <img src="image.jpg" alt="Areeba at Party" data-caption="Areeba rocking the party!">
+      <img src="image.jpg" alt="Areeba with Family" data-caption="Areeba with loved ones!">
+      <img src="image.jpg" alt="Areeba Adventure" data-caption="Areeba's epic adventure!">
+      <div class="slideshow-caption" id="slideshowCaption"></div>
+      <div class="slideshow-nav">
+        <button onclick="prevSlide()">❮</button>
+        <button onclick="nextSlide()">❯</button>
+      </div>
+    </div>
+    <div class="music-section">
+      <h3>Choose Your Birthday Tune 🎶</h3>
+      <select id="musicSelect" onchange="playMusic()">
+        <option value="">Select a Song</option>
+        <option value="https://www.kozco.com/tech/piano2-Audacity1.2.5.mp3">Happy Birthday Remix</option>
+        <option value="https://www.kozco.com/tech/LRMonoPhase4.mp3">Celebration Song</option>
+        <option value="https://www.kozco.com/tech/organfinale.mp3">Joyful Melody</option>
+        <option value="https://www.kozco.com/tech/LRMonoPhase4.mp3">Party Vibes</option>
+      </select>
+      <button class="mute-toggle" id="muteToggle" onclick="toggleMute()">Mute</button>
+    </div>
+    <div class="background-section">
+      <h3>Choose Background</h3>
+      <select id="backgroundSelect" onchange="changeBackground()">
+        <option value="default">Pink-Yellow</option>
+        <option value="blue-green">Blue-Green</option>
+        <option value="purple-orange">Party</option>
+      </select>
+    </div>
+    <div class="theme-toggle">
+      <button onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+    <div class="social-share">
+      <button onclick="share('whatsapp')">Share on WhatsApp</button>
+      <button onclick="share('x')">Share on X</button>
+    </div>
+    <div class="analytics">
+      <p>Visitors: <span id="visitorCount">0</span></p>
+    </div>
+    <div class="download-button">
+      <button onclick="downloadCard()">Download Birthday Card</button>
+    </div>
+    <div class="game-button">
+      <a href="games.html"><button>Play Games?</button></a>
+    </div>
+  </div>
+  <div class="message-form">
+    <h3>Leave a Birthday Message 💖</h3>
+    <div class="input-wrapper">
+      <input type="text" id="nameInput" placeholder="Your Name" aria-label="Your Name" required>
+      <label for="nameInput">Your Name</label>
+    </div>
+    <div class="input-wrapper">
+      <textarea id="messageInput" placeholder="Write your message..." rows="5" aria-label="Message" required></textarea>
+      <label for="messageInput">Your Message</label>
+    </div>
+    <button onclick="submitMessage()">Submit Message</button>
+  </div>
+  <div class="guestbook">
+    <h3>Guestbook 📖</h3>
+    <div id="guestbookEntries"></div>
+    <button onclick="clearGuestbook()">Clear Guestbook</button>
+    <button onclick="downloadGuestbook()">Download Guestbook</button>
+  </div>
+  <audio id="backgroundMusic" loop></audio>
+  <audio id="balloonPopSound" src="pop.mp3"></audio>
+  <audio id="giftRevealSound" src="spark.mp3"></audio>
+  <script>
+    let isMuted = false;
+    // Visitor counter
+    let visitorCount = parseInt(localStorage.getItem('visitorCount') || '0') + 1;
+    localStorage.setItem('visitorCount', visitorCount);
+    document.getElementById('visitorCount').textContent = visitorCount;
+
+    // Clock
+    function updateClock() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi' });
+      document.getElementById('clock').textContent = timeString;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Countdown to next birthday
+    function updateCountdown() {
+      const now = new Date();
+      const nextBirthday = new Date(now.getFullYear() + 1, 5, 11); // June 11, 2026
+      const diff = nextBirthday - now;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      document.getElementById('countdown').textContent = `${days}d ${hours}h ${minutes}m to next birthday!`;
+    }
+    setInterval(updateCountdown, 60000);
+    updateCountdown();
+
+    // Gift reveal and close
+    function revealGift() {
+      const giftContainer = document.getElementById('giftContainer');
+      giftContainer.classList.add('open');
+      gsap.to('.gift-lid', { y: '-100%', opacity: 0, duration: 1, ease: 'bounce.out' });
+      setTimeout(() => {
+        giftContainer.classList.add('revealed');
+        createConfettiBurst();
+        if (!isMuted) {
+          document.getElementById('giftRevealSound').play().catch(() => console.log('Sound blocked'));
+        }
+      }, 1000);
+      gsap.fromTo(giftContainer, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out' });
+      giftContainer.style.display = 'block';
+    }
+    function closeGift() {
+      const giftContainer = document.getElementById('giftContainer');
+      gsap.to(giftContainer, { scale: 0, opacity: 0, duration: 0.5, ease: 'back.in', onComplete: () => {
+        giftContainer.classList.remove('open', 'revealed');
+        giftContainer.style.display = 'none';
+      }});
+    }
+
+    // Slideshow
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slideshow img');
+    const caption = document.getElementById('slideshowCaption');
+    function showSlide(index) {
+      slides.forEach((slide, i) => {
+        if (i === index) {
+          gsap.to(slide, { opacity: 1, scale: 1, duration: 1, ease: 'power2.out' });
+          slide.classList.add('active');
+        } else {
+          gsap.to(slide, { opacity: 0, scale: 1.1, duration: 1 });
+          slide.classList.remove('active');
+        }
+      });
+      caption.textContent = slides[index].dataset.caption;
+    }
+    function nextSlide() {
+      currentSlide = (currentSlide + 1) % slides.length;
+      showSlide(currentSlide);
+    }
+    function prevSlide() {
+      currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+      showSlide(currentSlide);
+    }
+    showSlide(currentSlide);
+    setInterval(nextSlide, 5000);
+
+    // Music player
+    function playMusic() {
+      const musicSelect = document.getElementById('musicSelect');
+      const audio = document.getElementById('backgroundMusic');
+      const selectedSong = musicSelect.value;
+      if (selectedSong && !isMuted) {
+        audio.src = selectedSong;
+        audio.play().catch(() => console.log('Autoplay blocked'));
+      } else {
+        audio.pause();
+      }
+    }
+
+    // Mute toggle
+    function toggleMute() {
+      isMuted = !isMuted;
+      const muteButton = document.getElementById('muteToggle');
+      muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+      const backgroundMusic = document.getElementById('backgroundMusic');
+      if (isMuted) {
+        backgroundMusic.pause();
+      } else {
+        playMusic();
+      }
+    }
+
+    // Messages
+    function submitMessage() {
+      const nameInput = document.getElementById('nameInput');
+      const messageInput = document.getElementById('messageInput');
+      const name = nameInput.value.trim();
+      const message = messageInput.value.trim();
+      if (name && message) {
+        const messages = JSON.parse(localStorage.getItem('areebaMessages') || '[]');
+        const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi' });
+        messages.push({ name, message, timestamp });
+        localStorage.setItem('areebaMessages', JSON.stringify(messages));
+        nameInput.value = '';
+        messageInput.value = '';
+        displayMessages();
+      } else {
+        alert('Please enter both name and message.');
+      }
+    }
+    function toggleLike(index) {
+      const likes = JSON.parse(localStorage.getItem('areebaLikes') || '[]');
+      if (likes.includes(index)) {
+        likes.splice(likes.indexOf(index), 1);
+      } else {
+        likes.push(index);
+      }
+      localStorage.setItem('areebaLikes', JSON.stringify(likes));
+      displayMessages();
+    }
+    function displayMessages() {
+      const guestbook = document.getElementById('guestbookEntries');
+      const messages = JSON.parse(localStorage.getItem('areebaMessages') || '[]');
+      const likes = JSON.parse(localStorage.getItem('areebaLikes') || '[]');
+      guestbook.innerHTML = messages.map((msg, i) => `
+        <p class="${likes.includes(i) ? 'liked' : ''}">
+          <strong>${msg.name}</strong> (${msg.timestamp}): ${msg.message} ${likes.includes(i) ? '❤️' : ''}
+          <button class="like-button ${likes.includes(i) ? 'liked' : ''}" onclick="toggleLike(${i})"></button>
+        </p>
+      `).join('');
+    }
+    function clearGuestbook() {
+      localStorage.removeItem('areebaMessages');
+      localStorage.removeItem('areebaLikes');
+      displayMessages();
+    }
+    function downloadGuestbook() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFillColor(255, 245, 245);
+      doc.rect(0, 0, 210, 297, 'F');
+      doc.setFontSize(36);
+      doc.setTextColor(255, 45, 85);
+      doc.text("Areeba's Guestbook", 105, 30, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      const messages = JSON.parse(localStorage.getItem('areebaMessages') || '[]');
+      const likes = JSON.parse(localStorage.getItem('areebaLikes') || '[]');
+      let y = 50;
+      messages.forEach((msg, i) => {
+        doc.text(`${i + 1}. ${msg.name} (${msg.timestamp}):`, 20, y);
+        doc.text(`${msg.message} ${likes.includes(i) ? '❤️' : ''}`, 20, y + 10, { maxWidth: 170 });
+        y += 30;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+      doc.save('Areeba_Guestbook.pdf');
+    }
+    displayMessages();
+
+    // Balloons
+    function createBalloon() {
+      const balloon = document.createElement('div');
+      balloon.className = 'balloon';
+      balloon.style.left = Math.random() * 90 + 'vw';
+      balloon.style.top = Math.random() * 50 + 'vh';
+      balloon.style.background = ['linear-gradient(135deg, #ff5e62, #ff2d55)', 'linear-gradient(135deg, #3f51b5, #5c6bc0)', 'linear-gradient(135deg, #4caf50, #66bb6a)', 'linear-gradient(135deg, #ffc107, #ffca28)'][Math.floor(Math.random() * 4)];
+      balloon.style.width = clamp(40, Math.random() * 20 + 40, 60) + 'px';
+      balloon.style.height = clamp(60, Math.random() * 30 + 60, 80) + 'px';
+      balloon.style.animationDuration = `${Math.random() * 2 + 4}s`;
+      document.body.appendChild(balloon);
+      gsap.to(balloon, { y: -20, rotation: 5, duration: 3, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+      balloon.onclick = () => {
+        balloon.classList.add('popped');
+        createConfettiBurst();
+        if (!isMuted) {
+          document.getElementById('balloonPopSound').play().catch(() => console.log('Sound blocked'));
+        }
+      };
+      setTimeout(() => balloon.remove(), 10000);
+    }
+    setInterval(createBalloon, 2000);
+
+    // Confetti
+    function createConfettiBurst() {
+      for (let i = 0; i < 20; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.background = ['#ff0', '#f00', '#0f0', '#00f', '#ff69b4'][Math.floor(Math.random() * 5)];
+        confetti.style.animationDuration = Math.random() * 2 + 1 + 's';
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 3000);
+      }
+    }
+    function createConfetti() {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      confetti.style.left = Math.random() * 100 + 'vw';
+      confetti.style.background = ['#ff0', '#f00', '#0f0', '#00f', '#ff69b4'][Math.floor(Math.random() * 5)];
+      confetti.style.animationDuration = Math.random() * 3 + 2 + 's';
+      document.body.appendChild(confetti);
+      setTimeout(() => confetti.remove(), 5000);
+    }
+    setInterval(createConfetti, 200);
+
+    // Theme toggle
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    }
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+    }
+
+    // Background change
+    function changeBackground() {
+      const select = document.getElementById('backgroundSelect');
+      const value = select.value;
+      document.body.className = value;
+      localStorage.setItem('background', value);
+    }
+    if (localStorage.getItem('background')) {
+      document.body.className = localStorage.getItem('background');
+      document.getElementById('backgroundSelect').value = localStorage.getItem('background');
+    }
+
+    // Social sharing
+    function share(platform) {
+      const url = encodeURIComponent(window.location.href);
+      const text = encodeURIComponent("Check out Areeba's birthday celebration website! 🎉");
+      if (platform === 'whatsapp') {
+        window.open(`https://api.whatsapp.com/send?text=${text}%20${url}`);
+      } else if (platform === 'x') {
+        window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`);
+      }
+    }
+
+    // Download birthday card
+    function downloadCard() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFillColor(255, 245, 245);
+      doc.rect(0, 0, 210, 297, 'F');
+      doc.setFontSize(36);
+      doc.setTextColor(255, 45, 85);
+      doc.text("Happy Birthday, Areeba!", 105, 50, { align: 'center' });
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Dear Areeba,", 20, 80);
+      doc.text("May your day be filled with joy and laughter!", 20, 100);
+      doc.text("Wishing you endless happiness and love.", 20, 120);
+      doc.text("You're a star, shine bright always!", 20, 140);
+      const name = document.getElementById('nameInput').value.trim() || 'Your Family';
+      const message = document.getElementById('messageInput').value.trim() || 'With all our love!';
+      doc.text(`From: ${name}`, 20, 180);
+      doc.text(message, 20, 200, { maxWidth: 170 });
+      doc.save('Areeba_Birthday_Card.pdf');
+    }
+
+    // Clamp function
+    function clamp(min, val, max) {
+      return Math.min(Math.max(val, min), max);
+    }
+  </script>
+</body>
+</html>

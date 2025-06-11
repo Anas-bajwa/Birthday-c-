@@ -1,0 +1,344 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Areeba's Birthday Games</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #ff8ba7, #40c4ff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 15px;
+      color: #333;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-family: 'Pacifico', cursive;
+      color: #ff2d55;
+      font-size: clamp(28px, 6vw, 36px);
+      margin-bottom: 15px;
+    }
+    h3 {
+      font-family: 'Pacifico', cursive;
+      color: #ff5e62;
+      font-size: clamp(18px, 4vw, 22px);
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: clamp(14px, 3vw, 16px);
+      margin-bottom: 10px;
+    }
+    .button {
+      background: #ff5e62;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+      margin: 5px;
+    }
+    .button:hover {
+      background: #ff2d55;
+      transform: scale(1.05);
+    }
+    .game-section {
+      display: none;
+    }
+    .game-container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      max-width: 400px;
+      width: 100%;
+    }
+    .scoreboard {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      width: 100%;
+    }
+    .scoreboard table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .scoreboard th, .scoreboard td {
+      padding: 8px;
+      border: 1px solid #ff5e62;
+    }
+    .scoreboard th {
+      background: #ff2d55;
+      color: white;
+    }
+    .scoreboard tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .game-grid {
+      display: grid;
+      gap: 4px;
+      margin: 10px auto;
+      justify-content: center;
+    }
+    .memory-grid {
+      grid-template-columns: repeat(4, 1fr);
+      max-width: 280px;
+    }
+    .tictactoe-grid {
+      grid-template-columns: repeat(3, 1fr);
+      max-width: 200px;
+    }
+    .rps-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .card, .cell, .rps-button {
+      position: relative;
+      padding-top: 100%;
+      border: 2px solid #ff5e62;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .rps-button {
+      padding-top: 0;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .card:hover, .cell:hover, .rps-button:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .card-inner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s;
+      transform-style: preserve-3d;
+    }
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      backface-visibility: hidden;
+    }
+    .card-front {
+      background: #ff2d55;
+      color: white;
+    }
+    .card-back {
+      background: white;
+      transform: rotateY(180deg);
+      font-size: 20px;
+    }
+    .cell {
+      font-size: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .game-status {
+      font-size: 14px;
+      color: #ff5e62;
+      min-height: 20px;
+    }
+    .instructions {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .confetti {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: #ff0;
+      opacity: 0.8;
+      animation: fall 3s linear;
+      z-index: 1000;
+    }
+    @keyframes fall {
+      0% { transform: translateY(-100vh) rotate(0deg); }
+      100% { transform: translateY(100vh) rotate(360deg); }
+    }
+    .win-line {
+      position: absolute;
+      background: #ff2d55;
+      z-index: 10;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 300px;
+      width: 90%;
+    }
+    .modal-content h2 {
+      color: #ff2d55;
+      font-family: 'Pacifico', cursive;
+      margin-bottom: 10px;
+    }
+    .modal-content p {
+      color: #333;
+      font-size: 14px;
+    }
+    @media (max-width: 400px) {
+      .container, .game-container, .scoreboard {
+        padding: 10px;
+      }
+      .memory-grid {
+        max-width: 240px;
+      }
+      .tictactoe-grid {
+        max-width: 180px;
+      }
+      .rps-button {
+        height: 40px;
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎉 Areeba's Birthday Games!</h1>
+    <p>Play fun games to celebrate!</p>
+    <button class="button" onclick="showGames()">Play Now!</button>
+    <button class="button" onclick="showNoMessage()">Maybe Later</button>
+    <p id="noMessage" style="display: none;">Enjoy your day, Areeba! <button class="button" onclick="goBack()">Back</button></p>
+    <div id="gameSection" class="game-section">
+      <div class="scoreboard">
+        <h3>Scores</h3>
+        <table id="scoreboardTable">
+          <tr><th>Game</th><th>You</th><th>AI</th><th>Last Win</th></tr>
+          <tr><td>Memory</td><td id="memoryHumanScore">0</td><td id="memoryAIScore">0</td><td id="memoryLastWin">-</td></tr>
+          <tr><td>Tic Tac Toe</td><td id="tictactoeHumanScore">0</td><td id="tictactoeAIScore">0</td><td id="tictactoeLastWin">-</td></tr>
+          <tr><td>Rock Paper Scissors</td><td id="rpsHumanScore">0</td><td id="rpsAIScore">0</td><td id="rpsLastWin">-</td></tr>
+        </table>
+        <button class="button" onclick="resetScoreboard()">Reset Scores</button>
+      </div>
+      <div id="memoryGame" class="game-container">
+        <h3>Memory Match</h3>
+        <p class="game-status" id="memoryStatus">Match all pairs! Moves: 0</p>
+        <p class="instructions">Click cards to find matching emojis.</p>
+        <label><input type="checkbox" id="memoryAIToggle" checked> Play with AI</label>
+        <div id="memoryGrid" class="game-grid memory-grid"></div>
+        <button class="button" onclick="resetMemoryGame()">Reset</button>
+      </div>
+      <div id="tictactoeGame" class="game-container">
+        <h3>Tic Tac Toe</h3>
+        <p class="game-status" id="tictactoeStatus">Your turn (X)</p>
+        <p class="instructions">Get 3 in a row!</p>
+        <label><input type="checkbox" id="tictactoeAIToggle" checked> Play with AI</label>
+        <div id="tictactoeGrid" class="game-grid tictactoe-grid"></div>
+        <button class="button" onclick="resetTictactoeGame()">Reset</button>
+      </div>
+      <div id="rpsGame" class="game-container">
+        <h3>Rock Paper Scissors</h3>
+        <p class="game-status" id="rpsStatus">Choose your move! Score: 0-0</p>
+        <p class="instructions">Pick rock, paper, or scissors (first to 3).</p>
+        <div class="rps-buttons">
+          <button class="button rps-button" onclick="playRPS('rock')">✊</button>
+          <button class="button rps-button" onclick="playRPS('paper')">🖐️</button>
+          <button class="button rps-button" onclick="playRPS('scissors')">✂️</button>
+        </div>
+        <button class="button" onclick="resetRPSGame()">Reset</button>
+      </div>
+      <button class="button" onclick="goBack()">Back</button>
+    </div>
+  </div>
+  <div id="celebrationModal" class="modal">
+    <div class="modal-content">
+      <h2>Happy Birthday, Areeba! 🎈</h2>
+      <p>You’re a game superstar! Here’s your virtual gift: a dazzling birthday crown 👑 and a wish for joy all year!</p>
+      <button class="button" onclick="closeCelebration()">Close</button>
+    </div>
+  </div>
+  <audio id="flipSound" src="https://freesound.org/data/previews/114/114123_2035185-lq.mp3"></audio>
+  <audio id="clickSound" src="https://freesound.org/data/previews/146/146721_2605393-lq.mp3"></audio>
+  <audio id="winSound" src="https://freesound.org/data/previews/387/387739_7252664-lq.mp3"></audio>
+  <script src="games.js"></script>
+</body>
+</html>
